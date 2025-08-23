@@ -5,11 +5,12 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <style>
-    select{ padding: 20px 20px;
-       width: 40%; 
-       border-radius: 5px;
-       }
-        body {
+    select {
+      padding: 20px 20px;
+      width: 40%; 
+      border-radius: 5px;
+    }
+    body {
       font-family: Arial, sans-serif;
       background: #f2f2f2;
       text-align: center;
@@ -31,13 +32,14 @@
       margin-top: 20px;
       padding: 10px;
     }
-    button{
+    button {
       color: #fffefe;
       background-color: orange;
       font-weight: bold;
       padding: 20px 20px;
       border: none;
       border-radius: 5px;
+      cursor: pointer;
     }
     input {
       width: 40%;
@@ -72,18 +74,22 @@
 </div>
 
 <script>
+  // ✅ Correct Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyB-gX5Rr8PHj4XI8BmJvNPOculbuZlhWgI",
     authDomain: "packagetracker-241f8.firebaseapp.com",
     projectId: "packagetracker-241f8",
-    storageBucket: "packagetracker-241f8.firebasestorage.app",
+    storageBucket: "packagetracker-241f8.appspot.com", // FIXED (.appspot.com)
     messagingSenderId: "536022774565",
     appId: "1:536022774565:web:41c3b6ab32460a471ea0cc",
     measurementId: "G-3E50K82VVC"
   };
+
+  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
+  // Generate tracking code
   function generateCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
@@ -93,53 +99,57 @@
     return code;
   }
 
+  // Handle form submit
   document.getElementById('adminForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const name = document.getElementById("name").value.trim();
-  const address = document.getElementById("address").value.trim();
-  const phone = document.getElementById("phone").value.trim();
-  const status = document.getElementById("status").value;
-  const code = generateCode();
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const address = document.getElementById("address").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const status = document.getElementById("status").value;
+    const code = generateCode();
 
-  let trackingHistory = [];
-  let currentStatus = "";
+    let trackingHistory = [];
+    let currentStatus = "";
 
-  const now = new Date();
+    const now = new Date();
 
-  if (status === "hold") {
-    trackingHistory = [
-      // { status: "Cleared", date: now.toUTCString() }
-    ];
-    currentStatus = "Clear Package";
-  } else {
-    trackingHistory = [
-      { status: "Cleared", date: new Date(now.getTime() - 3 * 3600000).toUTCString() },
-      { status: "In Transit", date: new Date(now.getTime() - 2 * 3600000).toUTCString() }
-    ];
-    currentStatus = "In Transit";
-  }
+    if (status === "hold") {
+      trackingHistory = [];
+      currentStatus = "Clear Package";
+    } else {
+      trackingHistory = [
+        { status: "Cleared", date: new Date(now.getTime() - 3 * 3600000).toUTCString() },
+        { status: "In Transit", date: new Date(now.getTime() - 2 * 3600000).toUTCString() }
+      ];
+      currentStatus = "In Transit";
+    }
 
-  await db.collection("packages").doc(code).set({
-    name,
-    address,
-    phone,
-    status,
-    currentStatus,
-    trackingHistory
+    try {
+      await db.collection("packages").doc(code).set({
+        name,
+        address,
+        phone,
+        status,
+        currentStatus,
+        trackingHistory
+      });
+
+      const message = status === "hold"
+        ? "🛑 Package is currently <strong>on hold</strong> at customs."
+        : "🚚 Package is <strong>in transit</strong> and will be delivered soon.";
+
+      document.getElementById("result").innerHTML = `
+        ✅ Tracking Code: <strong>${code}</strong><br>
+        ${message}<br><br>
+        <em>Send this code to the user for tracking.</em>
+      `;
+      document.getElementById("adminForm").reset();
+
+    } catch (err) {
+      console.error("❌ Firestore Error:", err);
+      document.getElementById("result").innerHTML = "❌ Error saving package. Check console for details.";
+    }
   });
-
-  const message = status === "hold"
-    ? "🛑 Package is currently <strong>on hold</strong> at customs."
-    : "🚚 Package is <strong>in transit</strong> and will be delivered soon.";
-
-  document.getElementById("result").innerHTML = `
-    ✅ Tracking Code: <strong>${code}</strong><br>
-    ${message}<br><br>
-    <em>Send this code to the user for tracking.</em>
-  `;
-  document.getElementById("adminForm").reset();
-});
-
 </script>
 </body>
 </html>
