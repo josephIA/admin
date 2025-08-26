@@ -2,14 +2,15 @@
 <html>
 <head>
   <title>Admin - Generate Package Code</title>
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <style>
-    select {
-      padding: 20px 20px;
-      width: 40%; 
-      border-radius: 5px;
-    }
+    select{ padding: 20px 20px;
+       width: 40%; 
+       border-radius: 5px;
+       }
     body {
       font-family: Arial, sans-serif;
       background: #f2f2f2;
@@ -32,14 +33,13 @@
       margin-top: 20px;
       padding: 10px;
     }
-    button {
+    button{
       color: #fffefe;
       background-color: orange;
       font-weight: bold;
       padding: 20px 20px;
       border: none;
       border-radius: 5px;
-      cursor: pointer;
     }
     input {
       width: 40%;
@@ -68,28 +68,29 @@
       <option value="hold">On Hold at Customs</option>
       <option value="shipping">Shipping in Progress</option>
     </select><br><br>
+
+    <!-- ✅ Added Admin Key input -->
+    <input type="password" id="adminKey" placeholder="Enter Admin Key" required><br><br>
+
     <button type="submit">Generate</button>
   </form>
   <div id="result"></div>
 </div>
 
 <script>
-  // ✅ Correct Firebase Config
   const firebaseConfig = {
-    apiKey: "AIzaSyB-gX5Rr8PHj4XI8BmJvNPOculbuZlhWgI",
-    authDomain: "packagetracker-241f8.firebaseapp.com",
-    projectId: "packagetracker-241f8",
-    storageBucket: "packagetracker-241f8.appspot.com", // FIXED (.appspot.com)
-    messagingSenderId: "536022774565",
-    appId: "1:536022774565:web:41c3b6ab32460a471ea0cc",
-    measurementId: "G-3E50K82VVC"
+    apiKey: "AIzaSyA-rUIh4Uffmc6kjk8VFWRXISdkZQxxnPI",
+    authDomain: "package-tracker-cb9fd.firebaseapp.com",
+    projectId: "package-tracker-cb9fd",
+    storageBucket: "package-tracker-cb9fd.firebasestorage.app",
+    messagingSenderId: "160321800329",
+    appId: "1:160321800329:web:ae4bd3325474907d631e58"
   };
 
   // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
 
-  // Generate tracking code
   function generateCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
@@ -99,23 +100,28 @@
     return code;
   }
 
-  // Handle form submit
   document.getElementById('adminForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+
     const name = document.getElementById("name").value.trim();
     const address = document.getElementById("address").value.trim();
     const phone = document.getElementById("phone").value.trim();
     const status = document.getElementById("status").value;
+    const adminKey = document.getElementById("adminKey").value.trim(); // ✅ read key
     const code = generateCode();
+
+    if (adminKey !== "airmaxexpress1010") { // ✅ check key
+      alert("Invalid Admin Key! Access denied.");
+      return;
+    }
 
     let trackingHistory = [];
     let currentStatus = "";
-
     const now = new Date();
 
     if (status === "hold") {
       trackingHistory = [];
-      currentStatus = "Clear Package";
+      currentStatus = "On Hold at Customs";
     } else {
       trackingHistory = [
         { status: "Cleared", date: new Date(now.getTime() - 3 * 3600000).toUTCString() },
@@ -124,31 +130,27 @@
       currentStatus = "In Transit";
     }
 
-    try {
-      await db.collection("packages").doc(code).set({
-        name,
-        address,
-        phone,
-        status,
-        currentStatus,
-        trackingHistory
-      });
+    await db.collection("packages").doc(code).set({
+      name,
+      address,
+      phone,
+      status,
+      currentStatus,
+      trackingHistory,
+      adminKey // 🔑 this will be validated by Firestore rules
+    });
 
-      const message = status === "hold"
-        ? "🛑 Package is currently <strong>on hold</strong> at customs."
-        : "🚚 Package is <strong>in transit</strong> and will be delivered soon.";
+    const message = status === "hold"
+      ? "🛑 Package is currently <strong>on hold</strong> at customs."
+      : "🚚 Package is <strong>in transit</strong> and will be delivered soon.";
 
-      document.getElementById("result").innerHTML = `
-        ✅ Tracking Code: <strong>${code}</strong><br>
-        ${message}<br><br>
-        <em>Send this code to the user for tracking.</em>
-      `;
-      document.getElementById("adminForm").reset();
+    document.getElementById("result").innerHTML = `
+      ✅ Tracking Code: <strong>${code}</strong><br>
+      ${message}<br><br>
+      <em>Send this code to the user for tracking.</em>
+    `;
 
-    } catch (err) {
-      console.error("❌ Firestore Error:", err);
-      document.getElementById("result").innerHTML = "❌ Error saving package. Check console for details.";
-    }
+    document.getElementById("adminForm").reset();
   });
 </script>
 </body>
